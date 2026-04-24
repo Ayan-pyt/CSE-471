@@ -19,9 +19,11 @@ export default function LoginPage() {
       login(data);
       if (data.role === 'student') navigate('/student-dashboard');
       else if (data.role === 'company') navigate('/company-dashboard');
-      else navigate('/internships');
+      else navigate('/admin-dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      console.error('Login error:', err);
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Login failed';
+      setError(msg);
     } finally { setLoading(false); }
   };
 

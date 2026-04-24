@@ -16,6 +16,8 @@ const LEARNING_PATHS = {
   teamwork: ['Teamwork Skills: Communicating Effectively in Groups', 'Agile with Atlassian Jira'],
 };
 
+const { getBadgeWeight } = require('./skillBadgeService');
+
 const normalize = (value) =>
   (value || '')
     .toString()
@@ -28,10 +30,15 @@ const uniqueSkills = (skills = []) => {
   const result = [];
 
   for (const skill of skills) {
-    const normalized = normalize(skill);
-    if (!normalized || seen.has(normalized)) continue;
-    seen.add(normalized);
-    result.push(skill.toString().trim());
+    if (!skill) continue;
+    const parts = skill.toString().split(/[,|]/);
+    for (const p of parts) {
+      const raw = p.trim();
+      const normalized = normalize(raw);
+      if (!normalized || seen.has(normalized)) continue;
+      seen.add(normalized);
+      result.push(raw);
+    }
   }
 
   return result;
@@ -51,15 +58,53 @@ const recommendationForSkill = (skill) => {
   ];
 };
 
-const calculateMatchInsights = ({ requiredSkills = [], studentSkills = [], cgpa = 0, minCGPA = 0 }) => {
+const calculateMatchInsights = ({
+  requiredSkills = [],
+  studentSkills = [],
+  verifiedSkills = [],
+  cgpa = 0,
+  minCGPA = 0,
+  weights = { skillWeight: 0.75, cgpaWeight: 0.25 },
+}) => {
   const normalizedStudentSkillSet = new Set(uniqueSkills(studentSkills).map(normalize));
 
-  const normalizedRequired = (requiredSkills || [])
+  // Supports legacy array format: ['React', 'Node'] and rich format: [{ skill: 'React', badgeLevel: 'gold' }]
+  const normalizedVerifiedSkillMap = new Map();
+  (verifiedSkills || []).forEach((entry) => {
+    if (!entry) return;
+
+    const skillName = typeof entry === 'string' ? entry : entry.skill;
+    if (!skillName) return;
+
+    const parts = skillName.toString().split(/[,|]/);
+    parts.forEach((p) => {
+      const raw = p.trim();
+      const normalizedSkill = normalize(raw);
+      if (!normalizedSkill) return;
+
+      const weight = typeof entry === 'string' ? getBadgeWeight('bronze') : getBadgeWeight(entry.badgeLevel);
+      const existingWeight = normalizedVerifiedSkillMap.get(normalizedSkill) || 0;
+      if (weight > existingWeight) {
+        normalizedVerifiedSkillMap.set(normalizedSkill, weight);
+      }
+    });
+  });
+
+  const normalizedRequired = [];
+  (requiredSkills || [])
     .filter((entry) => entry && entry.skill)
-    .map((entry) => ({
-      skill: entry.skill.toString().trim(),
-      weight: Number(entry.weight) > 0 ? Number(entry.weight) : 1,
-    }));
+    .forEach((entry) => {
+      const parts = entry.skill.toString().split(/[,|]/);
+      parts.forEach((p) => {
+        const raw = p.trim();
+        if (raw) {
+          normalizedRequired.push({
+            skill: raw,
+            weight: Number(entry.weight) > 0 ? Number(entry.weight) : 1,
+          });
+        }
+      });
+    });
 
   const totalRequiredWeight = normalizedRequired.reduce((sum, item) => sum + item.weight, 0);
 
@@ -88,8 +133,29 @@ const calculateMatchInsights = ({ requiredSkills = [], studentSkills = [], cgpa 
   const minCgpaNum = Number(minCGPA) || 0;
   const cgpaScore = minCgpaNum <= 0 ? 100 : Math.max(0, Math.min(100, (cgpaNum / minCgpaNum) * 100));
 
+  const verifiedMatchedCount = matchedSkills.filter((item) =>
+    normalizedVerifiedSkillMap.has(normalize(item.skill))
+  ).length;
+
+  const verifiedBonus = Math.min(
+    8,
+    matchedSkills.reduce((sum, item) => {
+      const badgeWeight = normalizedVerifiedSkillMap.get(normalize(item.skill));
+      if (!badgeWeight) return sum;
+      return sum + badgeWeight;
+    }, 0)
+  );
+
+  const skillWeight = Number(weights?.skillWeight);
+  const cgpaWeight = Number(weights?.cgpaWeight);
+  const totalWeight = skillWeight + cgpaWeight;
+  const normalizedSkillWeight = totalWeight > 0 ? skillWeight / totalWeight : 0.75;
+  const normalizedCgpaWeight = totalWeight > 0 ? cgpaWeight / totalWeight : 0.25;
+
   // Balanced recommendation: skill fit is primary signal, CGPA is secondary tie-breaker.
-  const recommendationScore = Number((matchScore * 0.75 + cgpaScore * 0.25).toFixed(2));
+  const recommendationScore = Number(
+    Math.min(100, matchScore * normalizedSkillWeight + cgpaScore * normalizedCgpaWeight + verifiedBonus).toFixed(2)
+  );
 
   return {
     matchScore,
@@ -100,6 +166,8 @@ const calculateMatchInsights = ({ requiredSkills = [], studentSkills = [], cgpa 
       totalRequiredWeight,
       matchedWeight,
       completionRatio: totalRequiredWeight ? Number((matchedWeight / totalRequiredWeight).toFixed(4)) : 0,
+      verifiedMatchedCount,
+      verifiedCredibilityBonus: Number(verifiedBonus.toFixed(2)),
     },
   };
 };

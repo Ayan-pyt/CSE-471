@@ -19,6 +19,12 @@ const studentRoutes = require('./routes/studentRoutes');
 const internshipRoutes = require('./routes/internshipRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
 const cvRoutes = require('./routes/cvRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const interviewRoutes = require('./routes/interviewRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const skillVerificationRoutes = require('./routes/skillVerificationRoutes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -26,6 +32,12 @@ app.use('/api/student', studentRoutes);
 app.use('/api/internship', internshipRoutes);
 app.use('/api/application', applicationRoutes);
 app.use('/api/cv', cvRoutes);
+app.use('/api/notification', notificationRoutes);
+app.use('/api/interview', interviewRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/skill-verification', skillVerificationRoutes);
 
 // Health check
 app.get('/', (req, res) => res.send('IntelliMatch API Running ✅'));
