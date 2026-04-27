@@ -7,7 +7,6 @@ Yes, the core feature is implemented end-to-end in the current codebase:
 - Student skills are compared against internship requirements using weighted skills.
 - Match percentage is calculated using the required formula.
 - Candidates are ranked for company review using a smart recommendation score.
-- The recommendation score now includes an Affinda-backed NLP signal from uploaded CV analysis.
 - Skill gap detection and learning recommendations are returned.
 - The frontend shows match score, gap info, ranking, and template-based posting flows.
 
@@ -27,8 +26,6 @@ Where:
 
 A second value is also calculated:
 - `recommendationScore` = a blended score using match score and CGPA, used for ranking.
-
-The current implementation also adds an NLP boost derived from Affinda CV extraction stored on the student profile.
 
 ## High-Level Flow
 
@@ -58,7 +55,6 @@ What it does:
 - Builds a skill gap report.
 - Attaches learning recommendations for missing skills.
 - Calculates a recommendation score for ranking.
-- Adds a semantic bonus from cached Affinda CV skills when available.
 
 Important functions:
 - `calculateMatchInsights(...)`
@@ -108,7 +104,6 @@ What happens there:
 - It loads all applications for that internship.
 - It fetches student profiles for all applicants.
 - It recalculates match and recommendation scores.
-- It includes cached CV skills parsed by Affinda when available.
 - It sorts candidates by:
   1. `recommendationScore`
   2. `matchScore`
@@ -128,7 +123,6 @@ What it does:
 - Takes a top N limit.
 - Takes a minimum recommendation score.
 - Finds the best applicants.
-- Uses the same Affinda-backed NLP boost as the ranking view.
 - Updates their application status to `Shortlisted`.
 
 ### 6. Template system
