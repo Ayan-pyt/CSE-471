@@ -19,5 +19,4 @@ const upload = multer({
 
 router.post('/upload-cv', protect, authorizeRoles('student'), upload.single('cv'), uploadCV);
 router.post('/confirm-skills', protect, authorizeRoles('student'), confirmSkills);
-
 module.exports = router;
