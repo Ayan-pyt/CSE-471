@@ -63,8 +63,32 @@ const login = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user || !(await user.matchPassword(password)))
+    if (!user) {
+      console.log(`Login failed: User not found for email ${email}`);
       return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      console.log(`Login failed: Incorrect password for email ${email}`);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    if (user.isActive === false || user.isFraudulent === true) {
+      return res.status(403).json({ message: 'Account is inactive. Please contact admin.' });
+    }
+
+    if (user.role === 'company' && user.approvalStatus && user.approvalStatus !== 'approved') {
+      return res.status(403).json({ message: `Company account is ${user.approvalStatus}. Admin approval is required.` });
+    }
+
+    await logActivity({
+      actor: user,
+      action: 'USER_LOGGED_IN',
+      entityType: 'User',
+      entityId: user._id,
+      details: { role: user.role },
+    });
 
     if (user.isActive === false || user.isFraudulent === true) {
       return res.status(403).json({ message: 'Account is inactive. Please contact admin.' });
