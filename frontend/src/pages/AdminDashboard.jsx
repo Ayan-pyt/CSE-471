@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getBadgeMeta, getEndorsementBadgeLevel } from '../utils/skillBadge';
 
 export default function AdminDashboard() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [analytics, setAnalytics] = useState(null);
   const [pendingCompanies, setPendingCompanies] = useState([]);
   const [fraudulentAccounts, setFraudulentAccounts] = useState([]);
@@ -42,13 +42,14 @@ export default function AdminDashboard() {
   const load = async () => {
     setLoading(true);
     try {
+      const config = { headers: { Authorization: `Bearer ${user?.token}` } };
       const [a, p, fraud, students, w, logs] = await Promise.all([
-        axios.get('/api/analytics/admin/dashboard'),
-        axios.get('/api/admin/companies/pending'),
-        axios.get('/api/admin/users/fraudulent'),
-        axios.get('/api/admin/students/verification-candidates'),
-        axios.get('/api/admin/algorithm-weights'),
-        axios.get('/api/admin/activity?limit=40'),
+        axios.get('/api/analytics/admin/dashboard', config),
+        axios.get('/api/admin/companies/pending', config),
+        axios.get('/api/admin/users/fraudulent', config),
+        axios.get('/api/admin/students/verification-candidates', config),
+        axios.get('/api/admin/algorithm-weights', config),
+        axios.get('/api/admin/activity?limit=40', config),
       ]);
       setAnalytics(a.data);
       setPendingCompanies(p.data || []);
@@ -72,27 +73,31 @@ export default function AdminDashboard() {
   }, []);
 
   const reviewCompany = async (id, decision) => {
-    await axios.put(`/api/admin/companies/${id}/review`, { decision });
+    const config = { headers: { Authorization: `Bearer ${user?.token}` } };
+    await axios.put(`/api/admin/companies/${id}/review`, { decision }, config);
     load();
   };
 
   const updateWeights = async (e) => {
     e.preventDefault();
-    await axios.put('/api/admin/algorithm-weights', weights);
+    const config = { headers: { Authorization: `Bearer ${user?.token}` } };
+    await axios.put('/api/admin/algorithm-weights', weights, config);
     load();
   };
 
-  const removeFraudulentAccount = async (user) => {
-    const ok = window.confirm(`Remove fraudulent account for ${user.name} (${user.email})? This action permanently removes linked records.`);
+  const removeFraudulentAccount = async (targetUser) => {
+    const ok = window.confirm(`Remove fraudulent account for ${targetUser.name} (${targetUser.email})? This action permanently removes linked records.`);
     if (!ok) return;
 
-    await axios.delete(`/api/admin/users/${user._id}/fraudulent`);
+    const config = { headers: { Authorization: `Bearer ${user?.token}` } };
+    await axios.delete(`/api/admin/users/${targetUser._id}/fraudulent`, config);
     load();
   };
 
   const verifySkill = async (e) => {
     e.preventDefault();
-    await axios.post('/api/skill-verification', verifyForm);
+    const config = { headers: { Authorization: `Bearer ${user?.token}` } };
+    await axios.post('/api/skill-verification', verifyForm, config);
     await load();
     setVerifyForm({ studentId: '', internshipId: '', source: 'manual', note: '' });
   };

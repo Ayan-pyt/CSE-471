@@ -55,7 +55,7 @@ const getAdminDashboardAnalytics = async (req, res) => {
 
     const deptSkillGap = departmentPlacement.map((dept) => {
       const deptProfiles = profiles.filter((p) => (p.department || 'Unknown') === dept.department);
-      const studentSkills = new Set(deptProfiles.flatMap((p) => p.skills || []).map((s) => s.toLowerCase()));
+      const studentSkills = new Set(deptProfiles.flatMap((p) => p.skills || []).map((s) => String(s || '').toLowerCase()));
       const demandedSkills = skillDemand.slice(0, 20).filter((s) => !studentSkills.has(s.skill));
       return {
         department: dept.department,
