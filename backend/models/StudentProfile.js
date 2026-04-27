@@ -9,7 +9,33 @@ const studentProfileSchema = new mongoose.Schema({
   certifications: [{ type: String }],
   projects: [{ type: String }],
   skills: [{ type: String }],
+  verifiedSkills: [
+    {
+      skill: { type: String, required: true },
+      verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      verifierRole: { type: String },
+      source: {
+        type: String,
+        enum: ['certification', 'project_review', 'internship_performance', 'manual'],
+        default: 'manual',
+      },
+      note: { type: String, default: '' },
+      badgeLevel: {
+        type: String,
+        enum: ['gold', 'silver', 'bronze'],
+        default: 'bronze',
+      },
+      cgpa: { type: Number, default: 0 },
+      skillMatch: { type: Number, default: 0 },
+      verifiedAt: { type: Date, default: Date.now },
+    },
+  ],
   cvUrl: { type: String },
+  cvInsights: {
+    provider: { type: String, default: 'affinda' },
+    extractedSkills: [{ type: String }],
+    analyzedAt: { type: Date },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('StudentProfile', studentProfileSchema);

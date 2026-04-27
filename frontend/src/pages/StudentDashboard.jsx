@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, NavLink } from 'react-router-dom';
 import axios from 'axios';
-import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
+
+const badgeMeta = {
+  gold: { label: 'Gold', style: { background: 'rgba(234,179,8,0.18)', borderColor: 'rgba(234,179,8,0.45)', color: '#fde68a' } },
+  silver: { label: 'Silver', style: { background: 'rgba(148,163,184,0.2)', borderColor: 'rgba(148,163,184,0.45)', color: '#e2e8f0' } },
+  bronze: { label: 'Bronze', style: { background: 'rgba(180,83,9,0.2)', borderColor: 'rgba(180,83,9,0.45)', color: '#fdba74' } },
+};
 
 // === Skill Tag Input ===
 function SkillTagInput({ skills, onChange }) {
@@ -113,6 +117,24 @@ function ProfileForm() {
               </span>
             ))}
           </div>
+        </div>
+        <div>
+          <label className="form-label">Verified Skill Badges</label>
+          {(form.verifiedSkills || []).length === 0 ? (
+            <p className="metric-note">No verified badges yet. Company or university admin verification will appear here.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {(form.verifiedSkills || []).map((entry, idx) => {
+                const badge = badgeMeta[entry.badgeLevel || 'bronze'] || badgeMeta.bronze;
+                return (
+                  <div key={`${entry.skill}_${idx}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span className="skill-tag" style={{ background: 'rgba(34,197,94,0.14)', borderColor: 'rgba(34,197,94,0.45)', color: '#86efac' }}>{entry.skill}</span>
+                    <span className="skill-tag" style={badge.style}>{badge.label} Badge</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button className="btn-primary" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Profile'}</button>
@@ -226,10 +248,6 @@ function CVUploadSection() {
 // === Student Dashboard ===
 export default function StudentDashboard() {
   const [view, setView] = useState('profile');
-  const sidebarLinks = [
-    { to: '#profile', label: 'My Profile', icon: 'profile' },
-    { to: '#cv', label: 'CV Upload', icon: 'cv' },
-  ];
 
   return (
     <div className="main-layout">
@@ -243,8 +261,12 @@ export default function StudentDashboard() {
           {[
             { key: 'profile', label: 'My Profile', icon: '👤' },
             { key: 'cv', label: 'CV Upload', icon: '📄' },
+            { key: 'insights', label: 'Skill Trends', icon: '📈', external: '/student-insights' },
             { key: 'search', label: 'Browse Internships', icon: '🔍', external: '/internships' },
             { key: 'apps', label: 'My Applications', icon: '📨', external: '/my-applications' },
+            { key: 'feedback', label: 'Feedback Portal', icon: '💬', external: '/student-feedback' },
+            { key: 'interviews', label: 'Interviews', icon: '🗓️', external: '/interviews' },
+            { key: 'notifications', label: 'Notifications', icon: '🔔', external: '/notifications' },
           ].map(link => (
             <a key={link.key} href={link.external || '#'} onClick={link.external ? undefined : (e) => { e.preventDefault(); setView(link.key); }}
               className={`nav-link${view === link.key ? ' active' : ''}`}>

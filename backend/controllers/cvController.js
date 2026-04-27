@@ -1,6 +1,6 @@
 const StudentProfile = require('../models/StudentProfile');
-const path = require('path');
 const fs = require('fs');
+const { analyzeCvFile } = require('../utils/affindaNlpService');
 
 // POST /api/student/upload-cv
 const uploadCV = async (req, res) => {
@@ -14,22 +14,16 @@ const uploadCV = async (req, res) => {
       return res.status(500).json({ message: 'AFFINDA_API_KEY is missing in your .env file.' });
     }
 
-    const { AffindaAPI, AffindaCredential } = require('@affinda/affinda');
-    const credential = new AffindaCredential(process.env.AFFINDA_API_KEY);
-    const client = new AffindaAPI(credential);
-    
-    const docStream = fs.createReadStream(uploadedPath);
     let extractedSkills = [];
+    let cvInsights = {
+      provider: 'affinda',
+      extractedSkills: [],
+      analyzedAt: new Date(),
+    };
     
     try {
-      const options = { file: docStream };
-      if (process.env.AFFINDA_WORKSPACE_ID) {
-         options.workspace = process.env.AFFINDA_WORKSPACE_ID;
-      }
-      
-      const result = await client.createDocument(options);
-      const rawSkills = result?.data?.skills || result?.skills || [];
-      extractedSkills = rawSkills.map(s => s.name || s.parsed || (typeof s === 'string' ? s : '')).filter(Boolean);
+      cvInsights = await analyzeCvFile(uploadedPath);
+      extractedSkills = cvInsights.extractedSkills || [];
     } catch (apiError) {
       console.error("Affinda API Error:", apiError);
       return res.status(500).json({ message: "Failed to parse CV with Affinda. Check your API key or credits.", error: apiError.message });
@@ -47,17 +41,27 @@ const uploadCV = async (req, res) => {
       // If Datamuse fails, continue without related skills
     }
 
-    // Save cvUrl to profile
+    // Save CV insights to profile
     await StudentProfile.findOneAndUpdate(
       { userId: req.user._id },
-      { cvUrl },
-      { upsert: true, new: true }
+      {
+        $set: {
+          name: req.user.name,
+          cvUrl,
+          cvInsights,
+        },
+        $addToSet: {
+          skills: { $each: extractedSkills },
+        },
+      },
+      { upsert: true, new: true, runValidators: true }
     );
 
     res.json({
       message: 'CV uploaded and parsed successfully',
       cvUrl,
       extractedSkills,
+      cvInsights,
       relatedSkills,
     });
   } catch (err) {

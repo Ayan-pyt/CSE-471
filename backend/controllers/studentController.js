@@ -29,9 +29,12 @@ const createProfile = async (req, res) => {
 // PUT /api/student/profile — update
 const updateProfile = async (req, res) => {
   try {
+    const payload = { ...req.body };
+    delete payload.verifiedSkills;
+
     const profile = await StudentProfile.findOneAndUpdate(
       { userId: req.user._id },
-      { ...req.body },
+      payload,
       { new: true, upsert: true, runValidators: true }
     );
     res.json(profile);
