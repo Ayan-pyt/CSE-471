@@ -4,6 +4,13 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+// Trim all env vars — fixes trailing newlines injected by PowerShell pipe during Vercel CLI setup
+Object.keys(process.env).forEach(key => {
+  if (typeof process.env[key] === 'string') {
+    process.env[key] = process.env[key].trim();
+  }
+});
+
 const app = express();
 
 // Middleware
