@@ -7,9 +7,10 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
+const allowedOrigin = (process.env.FRONTEND_URL || '').trim() || '*';
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true,
+  origin: allowedOrigin,
+  credentials: allowedOrigin !== '*',
 }));
 app.use(express.json());
 
