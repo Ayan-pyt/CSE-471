@@ -24,6 +24,33 @@ app.use(express.json());
 // Serve uploaded files statically (local dev only)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ── MongoDB connection with caching (serverless-safe) ──
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected) return;
+  if (mongoose.connection.readyState >= 1) {
+    isConnected = true;
+    return;
+  }
+  await mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 10000,
+  });
+  isConnected = true;
+  console.log('✅ Connected to MongoDB');
+};
+
+// Ensure DB is connected before every request (MUST be before routes)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('MongoDB connection error:', err.message);
+    res.status(500).json({ message: 'Database connection failed', error: err.message });
+  }
+});
+
 // Load routes
 const authRoutes = require('./routes/authRoutes');
 const studentRoutes = require('./routes/studentRoutes');
@@ -60,29 +87,7 @@ app.use((err, req, res, next) => {
   res.status(400).json({ message: err.message || 'Something went wrong' });
 });
 
-// ── MongoDB connection with caching (serverless-safe) ──
-let isConnected = false;
-const connectDB = async () => {
-  if (isConnected) return;
-  if (mongoose.connection.readyState >= 1) {
-    isConnected = true;
-    return;
-  }
-  await mongoose.connect(process.env.MONGO_URI);
-  isConnected = true;
-  console.log('✅ Connected to MongoDB');
-};
 
-// Ensure DB is connected before every request (works on Vercel cold starts)
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    res.status(500).json({ message: 'Database connection failed' });
-  }
-});
 
 // ── Local dev: start HTTP server ──
 if (process.env.VERCEL !== '1') {
